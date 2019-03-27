@@ -31,33 +31,86 @@ public class QueryBuilder<T> {
     private static final String PAGE = "page";
 
 
+    /**
+     * Syntax: query with optional sorting and paging specifications, delimited by semicolon
+     * See ??? for query syntax
+     * @param query
+     * @param rootClass
+     * @return
+     * @throws QueryException
+     */
     public static BooleanBuilder buildQuery(String query, Class<?> rootClass) throws QueryException {
-        BooleanBuilder builder = new BooleanBuilder();
-
         String[] parts = query.split(";");
-        if (StringUtils.isEmpty(parts[0])) {
+        return buildQuery0(parts[0], rootClass);
+    }
+
+
+    /**
+     * Syntax: proper query only, without sorting and paging specifications
+     * See ??? for query syntax
+     * @param query
+     * @param rootClass
+     * @return
+     * @throws QueryException
+     */
+
+    public static BooleanBuilder buildQuery0(String query, Class<?> rootClass) throws QueryException {
+        BooleanBuilder builder = new BooleanBuilder();
+        if (query==null || query.isEmpty()) {
             return builder;
         }
-        Lexer lexer = new Lexer(new ByteArrayInputStream(parts[0].getBytes()));
+        Lexer lexer = new Lexer(new ByteArrayInputStream(query.getBytes()));
         QueryParser queryParser = new QueryParser(lexer, rootClass);
         AST<BooleanExpression> ast = queryParser.build();
         BooleanExpression expression = ast.evaluate();
         return builder.and(expression);
     }
 
+    /**
+     * Syntax: part of query-sort-page specification delimited by semicolon.
+     * The sort part of the syntax: "SORT [BY] field [ASC|DESC] { , field [ASC|DESC] } *"
+     * When no part starting with "SORT" (case insensitive), null is returned
+     *
+     * @param query
+     * @return
+     * @throws QueryException
+     */
     public static Sort buildSort(String query) throws QueryException {
         String[] parts = query.split(";");
         int bound = parts.length;
         for (int i = 1; i < bound; i++) {
             if (parts[i].trim().toLowerCase().startsWith(SORT)) {
                 Lexer lexer = new Lexer(new ByteArrayInputStream(parts[i].getBytes()));
-                SortParser sortParser = new SortParser(lexer);
+                SortParser sortParser = new SortParser(lexer, false);
                 return sortParser.build();
             }
         }
         return null;
     }
 
+    /**
+     * Syntax: "[+|-] field { , [+|-] field } *"
+     * @param sort
+     * @return
+     * @throws QueryException
+     */
+    public static Sort buildSort0(String sort) throws QueryException {
+        if (sort==null || sort.isEmpty()) return null;
+        Lexer lexer = new Lexer(new ByteArrayInputStream(sort.getBytes()));
+        SortParser sortParser = new SortParser(lexer, true);
+        return sortParser.build();
+    }
+
+    /**
+     * Syntax: part of query-sort-page specification delimited by semicolon.
+     * The syntax for the paging part only: "PAGE [=] page_number [ [, ] PAGESIZE [=] page_size ]"
+     * The default page number is 0, and the default page size is 25.
+     * When no part starting with "PAGE" (case insensitive), null is returned
+     *
+     * @param query
+     * @return
+     * @throws QueryException
+     */
     public static PageRequest buildPage(String query) throws QueryException {
         String[] parts = query.split(";");
         int bound = parts.length;
@@ -71,6 +124,17 @@ public class QueryBuilder<T> {
         return null;
     }
 
+    /**
+     *
+     * @param pageNumber when it is negative, no pagination is used
+     * @param pageSize when it is 0, the default page size (25) is used; when it is negative, no pagination is used
+     * @return
+     * @throws QueryException
+     */
+    public static PageRequest buildPage0(int pageNumber, int pageSize) throws QueryException {
+        if (pageSize<0 || pageNumber<0) return null;
+        return PageRequest.of(pageNumber, pageSize==0?PageParser.DEFAULT_PAGESIZE:pageSize);
+    }
 
     public static FieldSelection buildFieldSelection(String query, Class<?> rootClass) throws QueryException {
         String include = null;

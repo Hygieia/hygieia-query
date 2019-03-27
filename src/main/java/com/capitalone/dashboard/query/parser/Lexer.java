@@ -39,6 +39,10 @@ public class Lexer {
     static final int ISFALSE = 15;
     static final int ISNOTNULL = 16;
     static final int ISNULL = 17;
+    static final int LT = 18;
+    static final int GT = 19;
+    static final int PLUS = 20;
+    static final int MINUS = 21;
 
     private static final String TRUE_LITERAL = "true";
     private static final String FALSE_LITERAL = "false";
@@ -60,14 +64,23 @@ public class Lexer {
         input.get().parseNumbers();
         input.get().wordChars('a', 'z');
         input.get().wordChars('A', 'Z');
-        input.get().whitespaceChars('\u0000', ' ');
-        input.get().whitespaceChars('\n', '\t');
+        input.get().wordChars('_', '_');
+        input.get().whitespaceChars('\u0000', '\u0000');
+        input.get().whitespaceChars(' ', ' ');
+        input.get().whitespaceChars('\t', '\t');
+        input.get().whitespaceChars('\n', '\n');
+        input.get().whitespaceChars('\r', '\r');
+        input.get().whitespaceChars('\f', '\f');
         input.get().ordinaryChar('(');
         input.get().ordinaryChar(')');
         input.get().ordinaryChar('&');
         input.get().ordinaryChar('|');
         input.get().ordinaryChar('!');
         input.get().ordinaryChar(',');
+        input.get().ordinaryChar('<');
+        input.get().ordinaryChar('>');
+        input.get().ordinaryChar('+');
+        input.get().ordinaryChar('-');
         input.get().wordChars('$', '$');
         input.get().quoteChar('\'');
     }
@@ -136,6 +149,18 @@ public class Lexer {
                     break;
                 case '=':
                     symbol = EQUAL;
+                    break;
+                case '<':
+                    symbol = LT;
+                    break;
+                case '>':
+                    symbol = GT;
+                    break;
+                case '+':
+                    symbol = PLUS;
+                    break;
+                case '-':
+                    symbol = MINUS;
                     break;
                 default:
                     symbol = INVALID;

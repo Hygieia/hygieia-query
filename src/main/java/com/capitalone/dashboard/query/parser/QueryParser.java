@@ -79,15 +79,24 @@ public class QueryParser {
     private void condition() throws QueryException {
         String key = lexer.get().getInput().sval;
         symbol.set(lexer.get().nextSymbol());
-        if (IntStream.of(Lexer.CONDITION_WORD, Lexer.ISTRUE, Lexer.ISFALSE, Lexer.ISNOTNULL, Lexer.ISNULL).allMatch(i1 -> symbol.get() != i1)) {
+        if (IntStream.of(Lexer.CONDITION_WORD, Lexer.ISTRUE, Lexer.ISFALSE, Lexer.ISNOTNULL, Lexer.ISNULL, Lexer.LT, Lexer.GT, Lexer.EQUAL).allMatch(i1 -> symbol.get() != i1)) {
             throw new QueryException("Query expression malformed at " + lexer.get().getTokenNumber(), QueryException.INVALID_OPERATOR);
         }
-        String op = lexer.get().getInput().sval;
+        String op0 = lexer.get().getInput().sval;
+        if (op0==null) {
+            if (symbol.get() == Lexer.LT) {
+                op0 = "lt";
+            } else if (symbol.get() == Lexer.GT) {
+                op0 = "gt";
+            } else if (symbol.get() == Lexer.EQUAL) {
+                op0 = "eq";
+            }
+        }
+        String op = op0;
         if (Stream.of(IN, ALL, ALLOF, ANYOF).anyMatch(s -> s.equalsIgnoreCase(op))) {
             group(key, op);
         } else if (IntStream.of(Lexer.ISFALSE, Lexer.ISTRUE, Lexer.ISNOTNULL, Lexer.ISNULL).anyMatch(i1 -> symbol.get() == i1)) {
             root.set(new OneExpression(rootClass.get(), key, op, null));
-
         } else {
             symbol.set(lexer.get().nextSymbol());
             if (IntStream.of(Lexer.CONDITION_WORD, Lexer.TRUE, Lexer.FALSE, Lexer.ISNULL, Lexer.ISNOTNULL, Lexer.QUOTE, Lexer.CONDITION_NUMBER).allMatch(i -> symbol.get() != i)) {

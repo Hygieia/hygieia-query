@@ -53,8 +53,14 @@ public class QueryBuilderTest {
 
     @Test
     public void buildQuerySimple3() throws QueryException {
-        BooleanBuilder actual = QueryBuilder.buildQuery("field1 equalsIgnoreCase 'Field1' and field2 gt 0", SomeTestClass.class);
-        assertEquals("eqIc(com.capitalone.dashboard.query.model.SomeTestClass.field1,Field1) && com.capitalone.dashboard.query.model.SomeTestClass.field2 > 0", actual.toString());
+        BooleanBuilder actual = QueryBuilder.buildQuery("field_1 equalsIgnoreCase 'Field1' and field2 gt 0", SomeTestClass.class);
+        assertEquals("eqIc(com.capitalone.dashboard.query.model.SomeTestClass.field_1,Field1) && com.capitalone.dashboard.query.model.SomeTestClass.field2 > 0", actual.toString());
+    }
+
+    @Test
+    public void buildQuerySimple4() throws QueryException {
+        BooleanBuilder actual = QueryBuilder.buildQuery("field1 < 5 and field2 = 0", SomeTestClass.class);
+        assertEquals("com.capitalone.dashboard.query.model.SomeTestClass.field1 < 5 && com.capitalone.dashboard.query.model.SomeTestClass.field2 = 0", actual.toString());
     }
 
     @Test

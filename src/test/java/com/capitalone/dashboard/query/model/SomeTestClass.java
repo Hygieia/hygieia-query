@@ -6,6 +6,7 @@ import java.util.Map;
 
 public class SomeTestClass {
     String field1;
+    String field_1;     // for testing words with "_"
     Integer field2;
     Double field3;
 
@@ -103,6 +104,14 @@ public class SomeTestClass {
 
     public void setField3(Double field3) {
         this.field3 = field3;
+    }
+
+    public String getField_1() {
+        return field_1;
+    }
+
+    public void setField_1(String field_1) {
+        this.field_1 = field_1;
     }
 
     public Object get$id() {

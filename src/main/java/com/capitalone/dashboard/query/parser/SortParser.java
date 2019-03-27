@@ -18,30 +18,37 @@ public class SortParser {
     private AtomicInteger symbol = new AtomicInteger();
     private AtomicReference<String> word = new AtomicReference<>();
     private Sort.Direction direction = Sort.Direction.ASC;
+    private boolean compact;    // when true, use the compact syntax that are more friendly for URL args: "[+|-] field { , [+|-] field } *"
     private static final String ASC = "ASC";
     private static final String DESC = "DESC";
 
 
-    public SortParser(Lexer lexer) {
+    public SortParser(Lexer lexer, boolean compact) {
         this.lexer.set(lexer);
+        this.compact = compact;
     }
 
     public Sort build() throws QueryException {
 
-        if (lexer.get().nextSymbol() != Lexer.SORT) {
-            throw new QueryException("Query expression malformed at " + lexer.get().getInput().lineno() + ". Must start with SORT", QueryException.INVALID_FIELD);
-        }
-        symbol.set(lexer.get().nextSymbol());
-        if (symbol.get() != Lexer.CONDITION_WORD) {
-            throw new QueryException("Query expression malformed at " + lexer.get().getInput().lineno() + ". Must be a alpha-numeric string", QueryException.INVALID_FIELD);
-        }
-        word.set(lexer.get().getInput().sval);
-        if ("by".equalsIgnoreCase(word.get())) {
-            symbol.set(lexer.get().nextSymbol());  // basically ignore the word 'by'
-        }
+        if (compact) {
+            parseSortCompact();
 
-        while (symbol.get() == Lexer.CONDITION_WORD) {
-            parseSort();
+        } else {
+            if (lexer.get().nextSymbol() != Lexer.SORT) {
+                throw new QueryException("Query expression malformed at " + lexer.get().getInput().lineno() + ". Must start with SORT", QueryException.INVALID_FIELD);
+            }
+            symbol.set(lexer.get().nextSymbol());
+            if (symbol.get() != Lexer.CONDITION_WORD) {
+                throw new QueryException("Query expression malformed at " + lexer.get().getInput().lineno() + ". Must be a alpha-numeric string", QueryException.INVALID_FIELD);
+            }
+            word.set(lexer.get().getInput().sval);
+            if ("by".equalsIgnoreCase(word.get())) {
+                symbol.set(lexer.get().nextSymbol());  // basically ignore the word 'by'
+            }
+
+            while (symbol.get() == Lexer.CONDITION_WORD) {
+                parseSort();
+            }
         }
 
         return parsed.get();
@@ -77,6 +84,35 @@ public class SortParser {
         }
     }
 
+    private void parseSortCompact() throws QueryException {
+        symbol.set(lexer.get().nextSymbol());
+        boolean done = false;
+        while (!done) {
+            if (symbol.get() == Lexer.MINUS) {
+                direction = Sort.Direction.DESC;
+                symbol.set(lexer.get().nextSymbol());
+            } else if (symbol.get() == Lexer.PLUS) {
+                direction = Sort.Direction.ASC;
+                symbol.set(lexer.get().nextSymbol());
+            } else {
+                direction = Sort.Direction.ASC;
+            }
+            if (symbol.get() != Lexer.CONDITION_WORD) {
+                throw new QueryException("Query expression malformed at " + lexer.get().getInput().lineno() + ". Must be a [+|-] Field_Name ", QueryException.INVALID_FIELD);
+            }
+            word.set(lexer.get().getInput().sval);
+            fillSort(word.get(), direction);
+            symbol.set(lexer.get().nextSymbol());
+            if (symbol.get() == Lexer.EOF || symbol.get() == Lexer.EOL || symbol.get() == Lexer.NONE ) {
+                done = true;
+            } else if (symbol.get() == Lexer.COMMA) {
+                symbol.set(lexer.get().nextSymbol());
+            } else {
+                throw new QueryException("Query expression malformed at " + lexer.get().getInput().lineno() + ". Must be a [+|-] Field_Name ", QueryException.INVALID_FIELD);
+            }
+        }
+    }
+
     private void fillSort (String prop, Sort.Direction direction) {
         if (parsed.get() == null) {
             parsed.set(new Sort(direction, prop));
@@ -84,4 +120,6 @@ public class SortParser {
             parsed.set(parsed.get().and(new Sort(direction, prop)));
         }
     }
+
+
 }

@@ -33,11 +33,25 @@ public interface OneQueryExecutor<T, V extends Serializable> extends PagingAndSo
         return count(booleanBuilder.getValue());
     }
 
-    default Iterable<T> find(String query) throws QueryException {
+    /**
+     * This is the main query exposed by the package.
+     *
+     * @param query    Syntax: documented in README.md in the project root directory (done by Topo?)
+     * @param sortSpec Syntax: "[+|-] field { , [+|-] field } *", where "-" means descending, "+" or no sign means ascending
+     *                 When it is null, entries are not sorted (internal order)
+     * @param pageNumber when it is negative, return all entries (no pagination)
+     * @param pageSize when it is negative or pageNumber is negative, return all entries (no pagination); when it is 0,
+     *                 use the default page size (25)
+     * @param fields Syntax: "field { , field } *"
+     *                 When it is null, all fields are returned
+     * @return entries
+     * @throws QueryException
+     */
+    default Iterable<T> find(String query, String sortSpec, int pageNumber, int pageSize, String[] fields) throws QueryException {
         TypeToken<T> genericType = new TypeToken<T>(this.getClass()) {};
-        BooleanBuilder booleanBuilder = QueryBuilder.buildQuery(query, genericType.getRawType());
-        Sort sort = QueryBuilder.buildSort(query);
-        PageRequest page = QueryBuilder.buildPage(query);
+        BooleanBuilder booleanBuilder = QueryBuilder.buildQuery0(query, genericType.getRawType());
+        Sort sort = QueryBuilder.buildSort0(sortSpec);
+        PageRequest page = QueryBuilder.buildPage0(pageNumber, pageSize);
 
         if (booleanBuilder == null || booleanBuilder.getValue() == null) {
             return IterableUtils.emptyIterable();
@@ -61,6 +75,53 @@ public interface OneQueryExecutor<T, V extends Serializable> extends PagingAndSo
 
         return findAll(booleanBuilder.getValue(), newPageRequest);
     }
+
+    /**
+     * This is an alternative form of the above method, where query, sortSpec, pageNumber, pageSize and fields are
+     * specified as a single string, delimited by ";". The query part is required and must be the first entry.
+     * Other parts are optional, detected by the first keyword described below:
+     *
+     * The sortSpec syntax (note this is different from above): "SORT [BY] field [ASC|DESC] { , field [ASC|DESC] } *"
+     *
+     * The pageNumber and pageSize syntax: "PAGE [=] pageNumber [ [,] PAGESIZE [=] pageSize ]
+     *      If PAGESIZE is missing, the default page size of 25 is used
+     *
+     * fields are not yet implemented
+     *
+     * @param queryAndSortPageFields
+     * @return
+     * @throws QueryException
+     */
+    default Iterable<T> find(String queryAndSortPageFields) throws QueryException {
+        TypeToken<T> genericType = new TypeToken<T>(this.getClass()) {};
+        BooleanBuilder booleanBuilder = QueryBuilder.buildQuery(queryAndSortPageFields, genericType.getRawType());
+        Sort sort = QueryBuilder.buildSort(queryAndSortPageFields);
+        PageRequest page = QueryBuilder.buildPage(queryAndSortPageFields);
+
+        if (booleanBuilder == null || booleanBuilder.getValue() == null) {
+            return IterableUtils.emptyIterable();
+        }
+
+        // sort and page are null
+        if (sort == null && page == null) {
+            return findAll(booleanBuilder.getValue());
+        }
+
+        // sort null and page not null
+        if (sort == null) {
+            return findAll(booleanBuilder.getValue(), page);
+        } else if (page == null) {
+            // sort not null and page is null
+            return findAll(booleanBuilder.getValue(), sort);
+        }
+
+        // booleanBuilder, sort, page all are not null
+        PageRequest newPageRequest = PageRequest.of(page.getPageNumber(), page.getPageSize(), sort);
+
+        return findAll(booleanBuilder.getValue(), newPageRequest);
+    }
+
+
 
 
     default Page<T> findWithDefaultPaging(String query) throws QueryException {
