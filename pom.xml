@@ -36,7 +36,7 @@
         <junit.version>4.12</junit.version>
         <pmd.version>3.6</pmd.version>
         <spring.data.version>2.3.1.RELEASE</spring.data.version>
-        <guava.version>27.0.1-jre</guava.version>
+        <guava.version>29.0-jre</guava.version>
         <commons.collection.version>4.4</commons.collection.version>
         <querydsl.version>4.3.1</querydsl.version>
         <junit.version>4.12</junit.version>
